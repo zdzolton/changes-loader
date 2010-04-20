@@ -55,8 +55,12 @@ function setupChangesHandler(name, ddoc, dbName) {
   var ddocOpts = ddoc.changes[name].query;
   var opts = {};
   for (var key in ddocOpts) { opts[key] = ddocOpts[key]; }
-  log('DEBUG', handlerFun, opts)
+  log('DEBUG', opts);
+  // TODO: store event emitter and handler function for future removal
+  // var changesEmitter = couchClient.db(dbName).changesStream(opts);
+  // changesEmitter.addListener('data', handlerFun);
   couchClient.db(dbName).changesStream(opts).addListener('data', handlerFun);
+  log('INFO', "changes handler started", [dbName, ddoc._id, name].join('/'));
 }
 
 function startHandlers(dbNames) {
