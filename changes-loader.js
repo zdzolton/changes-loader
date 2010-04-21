@@ -121,7 +121,6 @@ function start() {
 if (require.main == module) {
   // NB: we're executing, not being require()'ed
   start();
-  
   process.addListener('uncaughtException', function (err) {
     log('ERROR', err);
   });
