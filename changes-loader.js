@@ -14,11 +14,9 @@ function getClientFromArgs(args) {
   return couchdb.createClient(urlParts.port, urlParts.hostname);
 }
 
-function compileHandler(name, ddoc, dbName) {
-  var handler = ddoc.changes[name];
-  var code = handler.handler;
-  log('DEBUG', code);
-  var requireFun = function(module) {
+// Not being used yet...
+function requireFunFor(ddoc) {
+  return function(module) {
     if (/^\.\//.test(module)) {
       var val = ddoc;
       var pathParts = module.split('/');
@@ -31,20 +29,41 @@ function compileHandler(name, ddoc, dbName) {
       return require(module);
     }
   };
-  var fullName = [dbName, ddoc._id, name];
+}
+
+function clientLogFun(clientName) {
+  return function(msg) {
+    log('CLIENT', clientName, msg);
+  }
+}
+
+function compileHandler(name, ddoc, dbName) {
+  var handler = ddoc.changes[name];
+  var code = handler.handler;
+  log('DEBUG', code);
+  var fullName = [dbName, ddoc._id, name].join('/');
+  var context = { 
+    ddoc: ddoc, 
+    require: require, 
+    log: clientLogFun(fullName) 
+  };
   var fun = process.evalcx(
     '(' + code  + ');', 
-    { require: requireFun }, 
-    fullName.concat('js').join('.')
+    context, 
+    fullName
   );
   if (typeof fun !== 'function') {
-    log('ERROR', fullName.join('/') + ' does not evaluate to a function');
+    log('ERROR', fullName + ' does not evaluate to a function');
     // TODO: somehow catch error...
   }
   return function(change) {
     // EventEmitter.addListener() doesn't work with evaled functions
-    log('DEBUG', "Handler called - " + fullName.join('/'));
-    fun(change); 
+    log('DEBUG', "Handler called - " + fullName);
+    try {
+      fun(change);
+    } catch (e) {
+      log('ERROR', fullName, err.type, err.message, err.stack);
+    }
   };
 }
 
@@ -102,4 +121,8 @@ function start() {
 if (require.main == module) {
   // NB: we're executing, not being require()'ed
   start();
+  
+  process.addListener('uncaughtException', function (err) {
+    log('ERROR', err);
+  });
 }
