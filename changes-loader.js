@@ -61,8 +61,8 @@ function compileHandler(name, ddoc, dbName) {
     log('DEBUG', "Handler called - " + fullName);
     try {
       fun(change);
-    } catch (e) {
-      log('ERROR', fullName, err.type, err.message, err.stack);
+    } catch (err) {
+      log('ERROR', fullName, err);
     }
   };
 }
