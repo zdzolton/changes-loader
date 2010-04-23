@@ -11,18 +11,6 @@ if (require.main == module) {
   // });
 }
 
-function ChangesListener(db, opts) {
-  var that = this;
-  that.changesEmitter = db.changesStream(opts);
-  this.start = function(fun) {
-    that.handlerFun = fun;
-    that.changesEmitter.addListener('data', that.handlerFun);
-  };
-  this.stop = function() {
-    that.changesEmitter.removeListener('data', that.handlerFun);
-  };
-}
-
 function start() {
   log('INFO', 'Starting changes loader');
   couchClient = getClientFromArgs(process.argv);
@@ -52,6 +40,8 @@ function checkForNewDBs(err, dbNames) {
             startClientListeners(db, row.doc);
           });
         });
+      } else {
+        log('DEBUG', 'Database already tracked', dbName);
       }
     });
     setTimeout(function() {
@@ -65,16 +55,18 @@ function setupDDocListener(db) {
   db.info(function(err, info) {
     var updateSeq = info.update_seq;
     opts = { since: updateSeq };
-    db.ddocListener = new ChangesListener(db, opts);
-    db.ddocListener.start(function(change) {
+    db.ddocListener = db.changesStream(opts);
+    db.ddocListener.addListener('data', function(change) {
       var docID = change.id;
       if (/^_design\//.test(docID)) {
         log('INFO', 'Design doc changed', docID);
         db.getDoc(docID, function(err, ddoc) {
           if (err) throw err;
           // stop existing client changes listeners for given ddoc
+          log('DEBUG', db);
           db.clientListeners[docID].forEach(function(listener) {
-            listener.stop();
+            log('DEBUG', 'Gonna stop now...');
+            listener.close();
           });
           startClientListeners(db, ddoc);
         });
@@ -96,8 +88,8 @@ function startClientListeners(db, ddoc) {
         for (var key in ddocOpts) { opts[key] = ddocOpts[key]; }
         opts.since = info.update_seq;
         log('INFO', "Changes handler started for " + fullName);
-        var listener = new ChangesListener(db, opts);
-        listener.start(compileHandler(handlerName, ddoc, db.name));
+        var listener = db.changesStream(opts);
+        listener.addListener('data', compileHandler(handlerName, ddoc, db.name));
         listeners.push(listener);
       });
     }
