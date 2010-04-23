@@ -28,16 +28,15 @@ function checkForNewDBs(err, dbNames) {
         log('DEBUG', 'Found new database', dbName);
         var db = couchClient.db(dbName);
         trackedDatabases[dbName] = db;
-        setupDDocListener(db);
+        setupDBListener(db);
         db.allDocs({
           startkey: "_design/",
           endkey: "_design0",
           include_docs: true
         }, function(err, resp) {
           if (err) throw err;
-          db.clientListeners = {};
           resp.rows.forEach(function(row) {
-            startClientListeners(db, row.doc);
+            createClientHandlers(db, row.doc);
           });
         });
       } else {
@@ -51,57 +50,46 @@ function checkForNewDBs(err, dbNames) {
   }
 }
 
-function setupDDocListener(db) {
+function setupDBListener(db) {
+  db.clientHandlers = {};
   db.info(function(err, info) {
-    var updateSeq = info.update_seq;
-    opts = { since: updateSeq };
-    db.ddocListener = db.changesStream(opts);
-    db.ddocListener.addListener('data', function(change) {
+    var opts = { since: info.update_seq };
+    log('DEBUG', 'Listening to changes on', db.name);
+    db.changesStream(opts).addListener('data', function(change) {
       var docID = change.id;
       if (/^_design\//.test(docID)) {
         log('INFO', 'Design doc changed', docID);
         db.getDoc(docID, function(err, ddoc) {
           if (err) throw err;
-          // stop existing client changes listeners for given ddoc
-          log('DEBUG', db);
-          db.clientListeners[docID].forEach(function(listener) {
-            log('DEBUG', 'Gonna stop now...');
-            listener.close();
+          createClientHandlers(db, ddoc);
+        });
+      } else {
+        Object.keys(db.clientHandlers).forEach(function(ddocName) {
+          db.clientHandlers[ddocName].forEach(function(handlerFun) {
+            handlerFun(change);
           });
-          startClientListeners(db, ddoc);
         });
       }
     });
   });
 }
 
-function startClientListeners(db, ddoc) {
+function createClientHandlers(db, ddoc) {
   var listeners = [];
   if (ddoc.changes) {
-    for (var handlerName in ddoc.changes) {
+    Object.keys(ddoc.changes).forEach(function(handlerName) {
       var fullName = [db.name, ddoc._id, handlerName].join('/');
-      log('DEBUG', 'Setting up changes handlers for ' + fullName);
-      db.info(function(err, info) {
-        // copy query options from the ddoc
-        var ddocOpts = ddoc.changes[handlerName].query;
-        var opts = {};
-        for (var key in ddocOpts) { opts[key] = ddocOpts[key]; }
-        opts.since = info.update_seq;
-        log('INFO', "Changes handler started for " + fullName);
-        var listener = db.changesStream(opts);
-        listener.addListener('data', compileHandler(handlerName, ddoc, db.name));
-        listeners.push(listener);
-      });
-    }
+      log('DEBUG', 'Setting up changes handler for ' + fullName);
+      listeners.push(compileHandler(handlerName, ddoc, db.name));
+    });
   }
-  db.clientListeners[ddoc._id] = listeners;
+  db.clientHandlers[ddoc._id] = listeners;
 }
 
 function compileHandler(name, ddoc, dbName) {
   var fullName = [dbName, ddoc._id, name].join('/');
   var clientLogFun = function(msg) { log('CLIENT', fullName, msg); };
-  var handler = ddoc.changes[name];
-  var code = handler.handler;
+  var code = ddoc.changes[name];
   var context = { ddoc: ddoc, require: require, log: clientLogFun };
   var fun = process.evalcx(
     '(' + code  + ');', 
