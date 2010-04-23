@@ -6,9 +6,9 @@ var trackedDatabases = {};
 if (require.main == module) {
   // NB: we're executing, not being require()'ed
   start();
-  // process.addListener('uncaughtException', function (err) {
-  //   log('ERROR', err);
-  // });
+  process.addListener('uncaughtException', function (err) {
+    log('ERROR', err);
+  });
 }
 
 function start() {
