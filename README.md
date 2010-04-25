@@ -6,8 +6,8 @@ Setup dependencies
 ---
 You'll need felixge's node-couchdb library:
 
-  mkdir -p ~/.node_libraries/
-  git clone git://github.com/felixge/node-couchdb.git ~/.node_libraries/node-couchdb
+    mkdir -p ~/.node_libraries/
+    git clone git://github.com/felixge/node-couchdb.git ~/.node_libraries/node-couchdb
 
 Usage
 ---
@@ -26,9 +26,9 @@ database's _changes stream.
 
 Each file should consist of function, such as the following:
 
-  function(change) {
-    // Respond to the changes here...
-  }
+    function(change) {
+      // Respond to the changes here...
+    }
 
 From your _changes handler, you'll have access to the following objects:
 
