@@ -75,15 +75,15 @@ function setupDBListener(db) {
 }
 
 function createClientHandlers(db, ddoc) {
-  var listeners = [];
+  var handlers = [];
   if (ddoc.changes) {
     Object.keys(ddoc.changes).forEach(function(handlerName) {
       var fullName = [db.name, ddoc._id, handlerName].join('/');
       log('DEBUG', 'Setting up changes handler for ' + fullName);
-      listeners.push(compileHandler(handlerName, ddoc, db.name));
+      handlers.push(compileHandler(handlerName, ddoc, db.name));
     });
   }
-  db.clientHandlers[ddoc._id] = listeners;
+  db.clientHandlers[ddoc._id] = handlers;
 }
 
 function compileHandler(name, ddoc, dbName) {
