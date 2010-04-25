@@ -2,10 +2,10 @@ changes-loader
 ===
 This might be awesome one day...
 
-Setup
+Setup dependencies
 ---
 You'll need felixge's node-couchdb library:
 
-        $ cd ~/.node_libraries/
-        $ git clone git://github.com/felixge/node-couchdb.git
+  mkdir -p ~/.node_libraries/
+  git clone git://github.com/felixge/node-couchdb.git ~/.node_libraries/node-couchdb
   
