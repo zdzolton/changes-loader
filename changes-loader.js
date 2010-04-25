@@ -25,20 +25,7 @@ function checkForNewDBs(err, dbNames) {
   } else {
     dbNames.forEach(function(dbName) {
       if (!trackedDatabases[dbName]) {
-        log('DEBUG', 'Found new database', dbName);
-        var db = couchClient.db(dbName);
-        trackedDatabases[dbName] = db;
-        setupDBListener(db);
-        db.allDocs({
-          startkey: "_design/",
-          endkey: "_design0",
-          include_docs: true
-        }, function(err, resp) {
-          if (err) throw err;
-          resp.rows.forEach(function(row) {
-            createClientHandlers(db, row.doc);
-          });
-        });
+        trackNewDB(dbName);
       } else {
         log('DEBUG', 'Database already tracked', dbName);
       }
@@ -48,6 +35,23 @@ function checkForNewDBs(err, dbNames) {
       couchClient.allDbs(checkForNewDBs);
     }, 60 * 1000);
   }
+}
+
+function trackNewDB(dbName) {
+  log('DEBUG', 'Found new database', dbName);
+  var db = couchClient.db(dbName);
+  trackedDatabases[dbName] = db;
+  setupDBListener(db);
+  db.allDocs({
+    startkey: "_design/",
+    endkey: "_design0",
+    include_docs: true
+  }, function(err, resp) {
+    if (err) throw err;
+    resp.rows.forEach(function(row) {
+      createClientHandlers(db, row.doc);
+    });
+  });
 }
 
 function setupDBListener(db) {
