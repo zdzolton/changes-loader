@@ -92,9 +92,12 @@ function createClientHandlers(db, ddoc) {
 
 function compileHandler(name, ddoc, dbName) {
   var fullName = [dbName, ddoc._id, name].join('/');
-  var clientLogFun = function(msg) { log('CLIENT', fullName, msg); };
   var code = ddoc.changes[name];
-  var context = { ddoc: ddoc, require: require, log: clientLogFun };
+  var context = { 
+    ddoc: ddoc, 
+    require: require, 
+    log: function(msg) { log('CLIENT', fullName, msg); } 
+  };
   var fun = process.evalcx(
     '(' + code  + ');', 
     context, 
