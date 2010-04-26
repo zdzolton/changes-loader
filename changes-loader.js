@@ -6,9 +6,9 @@ var trackedDatabases = {};
 if (require.main == module) {
   // NB: we're executing, not being require()'ed
   start();
-  process.addListener('uncaughtException', function (err) {
-    log('ERROR', err);
-  });
+  // process.addListener('uncaughtException', function (err) {
+  //   log('ERROR', err);
+  // });
 }
 
 function start() {
@@ -94,8 +94,7 @@ function compileHandler(name, ddoc, dbName) {
   var fullName = [dbName, ddoc._id, name].join('/');
   var code = ddoc.changes[name];
   var context = { 
-    ddoc: ddoc, 
-    require: require, 
+    require: makeRequireFun([ddoc, ddoc.changes]), 
     log: function(msg) { log('CLIENT', fullName, msg); } 
   };
   var fun = process.evalcx(
@@ -114,6 +113,38 @@ function compileHandler(name, ddoc, dbName) {
       log('ERROR', fullName, err);
     }
   };
+}
+
+function makeRequireFun(initialRefStack) {
+  return function(moduleID) {
+    if (/^\.\.?(\/[^\/]+)+/.test(moduleID)) {
+      log('DEBUG', 'Resolving module from design doc', moduleID);
+      return resolveModuleRequire(moduleID, initialRefStack.slice());
+    } else {
+      log('DEBUG', 'Resolving module from Node.JS require paths', moduleID);
+      return require(moduleID);
+    }
+  };
+}
+
+function resolveModuleRequire(moduleID, refStack) {
+  moduleID.split('/').forEach(function(part) {
+    if (part == '..') {
+      refStack.pop();
+    } else if (part != '.') {
+      var current = refStack[refStack.length - 1];
+      var next =  current[part];
+      if (!next) throw "Cannot find module in design doc '" + moduleID + "'";
+      refStack.push(next);
+    }
+  });
+  var code = refStack.pop();
+  var context = {
+    exports: {},
+    require: makeRequireFun(refStack)
+  };
+  process.evalcx(code, context, moduleID);
+  return context.exports;
 }
 
 function log() {
