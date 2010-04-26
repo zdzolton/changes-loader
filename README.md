@@ -13,7 +13,7 @@ Usage
 ---
 Keep the changes-loader.js script running:
 
-  node /path/to/changes-loader.js COUCHDB_ROOT_URL
+    node /path/to/changes-loader.js COUCHDB_ROOT_URL
 
 This script looks thru all databases for any design docs with _changes handlers code to be
 loaded and run. New databases will be detected every 60 seconds.
@@ -32,6 +32,8 @@ Each file should consist of function, such as the following:
 
 From your _changes handler, you'll have access to the following objects:
 
-  * ddoc
-  * log(msg)
-  * require(module)
+  * ddoc — the design document that hosts the loaded changes function
+  * log(msg) — this will show up in the stdout of the changes-loader.js script
+  * require(module) — currently this is the standard Node.JS require() function
+
+    
