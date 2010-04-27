@@ -54,3 +54,8 @@ From your _changes handler, you'll have access to the following objects:
   * require(moduleID) — load CommonJS modules, as follows:
     * if the moduleID begins with ./ or ../ load a module from the design document
     * otherwise Node.JS will load the module from its require() paths
+
+Node.JS compatibility
+---
+This code has been known to work with version 0.1.91 of Node. As always, YMMV (^_-)
+
