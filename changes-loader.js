@@ -84,16 +84,17 @@ function createClientHandlers(db, ddoc) {
     Object.keys(ddoc.changes).forEach(function(handlerName) {
       var fullName = [db.name, ddoc._id, handlerName].join('/');
       log('DEBUG', 'Setting up changes handler for ' + fullName);
-      handlers.push(compileHandler(handlerName, ddoc, db.name));
+      handlers.push(compileHandler(handlerName, ddoc, db));
     });
   }
   db.clientHandlers[ddoc._id] = handlers;
 }
 
-function compileHandler(name, ddoc, dbName) {
-  var fullName = [dbName, ddoc._id, name].join('/');
+function compileHandler(name, ddoc, db) {
+  var fullName = [db.name, ddoc._id, name].join('/');
   var code = ddoc.changes[name];
   var context = {
+    db: db,
     ddoc: ddoc,
     require: makeRequireFun([ddoc, ddoc.changes]), 
     log: function(msg) { log('CLIENT', fullName, msg); } 
