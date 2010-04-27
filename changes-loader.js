@@ -93,7 +93,8 @@ function createClientHandlers(db, ddoc) {
 function compileHandler(name, ddoc, dbName) {
   var fullName = [dbName, ddoc._id, name].join('/');
   var code = ddoc.changes[name];
-  var context = { 
+  var context = {
+    ddoc: ddoc,
     require: makeRequireFun([ddoc, ddoc.changes]), 
     log: function(msg) { log('CLIENT', fullName, msg); } 
   };
